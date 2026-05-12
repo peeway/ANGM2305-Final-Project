@@ -58,6 +58,16 @@ class Block:
             position = Position(position.row + self.row_offset, position.column + self.column_offset)
             moved_tiles.append(position)
         return moved_tiles
+    
+    def rotate(self):
+        self.rotation_state += 1
+        if self.rotation_state == len(self.cells):
+            self.rotation_state = 0
+
+    def undo_rotation(self):
+        self.rotation_state -= 1
+        if self.rotation_state == 0:
+            self.rotation_state = len(self.cells) - 1
 
     def draw(self, screen):
         tiles = self.get_cell_positions()
@@ -194,6 +204,12 @@ class Game:
         if self.block_inside() == False:
             self.current_block.move (-1,0)
 
+    def rotate(self):
+        self.current_block.rotate()
+        if self.block_inside() == False:
+            self.current_block.undo_rotation()
+
+
     def block_inside(self):
         tiles = self.current_block.get_cell_positions()
         for tile in tiles:
@@ -220,6 +236,8 @@ while True:
                 game.move_right()      
             if event.key == pygame.K_DOWN: 
                 game.move_down()
+            if event.key == pygame.K_UP:
+                game.rotate()
     
     screen.fill(dark_blue)
     game.draw(screen)
