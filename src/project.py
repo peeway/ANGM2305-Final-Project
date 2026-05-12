@@ -204,6 +204,14 @@ class Game:
         if self.block_inside() == False:
             self.current_block.move (-1,0)
 
+    def lock_block(self):
+        tiles = self.current_block.get_cell_positions()
+        for position in tiles:
+            self.grid.grid[position.row][position.column] = self.current_block.id
+        self.current_block = self.next_block()
+        self.next_block = self.get_random_block()
+
+
     def rotate(self):
         self.current_block.rotate()
         if self.block_inside() == False:
@@ -224,6 +232,9 @@ class Game:
 
 game = Game()
 
+GAME_UPDATE = pygame.USEREVENT
+pygame.time.set_timer(GAME_UPDATE, 200)
+
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -238,6 +249,8 @@ while True:
                 game.move_down()
             if event.key == pygame.K_UP:
                 game.rotate()
+        if event.type == GAME_UPDATE:
+            game.move_down()
     
     screen.fill(dark_blue)
     game.draw(screen)
