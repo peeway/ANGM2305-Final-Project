@@ -1,4 +1,5 @@
 import pygame
+import random
 
 pygame.init()
 dark_blue = (44, 44, 127)
@@ -21,13 +22,19 @@ class Grid:
             for column in range(self.num_cols):
              print(self.grid[row][column], end = " ")
         print()
+    
+    def is_inside(self, row, column):
+        if row >= 0 and row < self.num_rows and column >= 0 and column < self.num_cols:
+            return True
+        return False
 
     
     def draw(self, screen):
         for row in range(self.num_rows):
             for column in range(self.num_cols):
                 cell_value = self.grid[row][column]
-                cell_rect = pygame.Rect(column*self.cell_size +1, row*self.cell_size +1, self.cell_size -1, self.cell_size -1)
+                cell_rect = pygame.Rect(column*self.cell_size +1, row*self.cell_size +1, 
+                                        self.cell_size -1, self.cell_size -1)
                 pygame.draw.rect(screen, self.colors[cell_value], cell_rect)
 
 class Block:
@@ -35,11 +42,25 @@ class Block:
         self.id = id 
         self.cells = {}
         self.cell_size = 30
+        self.row_offset = 0
+        self.column_offset = 0
         self.rotation_state = 0
         self.colors = Colors.get_cell_colors()
 
-    def draw(self, screen):
+    def move(self, rows, columns):
+        self.row_offset += rows
+        self.column_offset += columns
+    
+    def get_cell_positions(self):
         tiles = self.cells[self.rotation_state]
+        moved_tiles = []
+        for position in tiles:
+            position = Position(position.row + self.row_offset, position.column + self.column_offset)
+            moved_tiles.append(position)
+        return moved_tiles
+
+    def draw(self, screen):
+        tiles = self.get_cell_positions()
         for tile in tiles:
             tile_rect = pygame.Rect(tile.column * self.cell_size + 1, tile.row * self.cell_size + 1, 
                                     self.cell_size - 1, self.cell_size - 1  )
@@ -59,6 +80,7 @@ class Lblock(Block):
             2: [Position(1,0), Position(1,1), Position(1,2), Position(2,0)],  
             3: [Position(0,0), Position(0,1), Position(1,1), Position(2,1)],  
         }
+        self.move(0, 3)
 
 class Jblock(Block):
     def __init__(self):
@@ -69,6 +91,7 @@ class Jblock(Block):
             2: [Position(1,0), Position(1,1), Position(1,2), Position(2,2)],  
             3: [Position(0,1), Position(1,1), Position(2,0), Position(2,1)],  
         }
+        self.move(0, 3)
 
 class Iblock(Block):
     def __init__(self):
@@ -79,6 +102,7 @@ class Iblock(Block):
             2: [Position(2,0), Position(2,1), Position(2,2), Position(2,3)],  
             3: [Position(0,1), Position(1,1), Position(2,1), Position(3,1)],  
         }
+        self.move(-1, 3)
 
 class Oblock(Block):
     def __init__(self):
@@ -89,6 +113,7 @@ class Oblock(Block):
             2: [Position(0,0), Position(0,1), Position(1,0), Position(1,1)],  
             3: [Position(0,0), Position(0,1), Position(1,0), Position(1,1)],  
         }
+        self.move(0, 4)
 
 class Sblock(Block):
     def __init__(self):
@@ -99,6 +124,7 @@ class Sblock(Block):
             2: [Position(1,1), Position(1,2), Position(2,0), Position(2,1)],  
             3: [Position(0,0), Position(1,0), Position(1,1), Position(2,1)],  
         }
+        self.move(0, 3)
 
 class Tblock(Block):
     def __init__(self):
@@ -109,6 +135,7 @@ class Tblock(Block):
             2: [Position(1,0), Position(1,1), Position(1,2), Position(2,1)],  
             3: [Position(0,1), Position(1,0), Position(1,1), Position(2,1)],  
         }
+        self.move(0, 3)
 
 class Zblock(Block):
     def __init__(self):
@@ -119,6 +146,7 @@ class Zblock(Block):
             2: [Position(1,0), Position(1,1), Position(2,1), Position(2,2)],  
             3: [Position(0,1), Position(1,0), Position(1,1), Position(2,0)],  
         }
+        self.move(0, 3)
 
 class Colors:
     dark_grey = (26, 31, 40)
@@ -132,24 +160,68 @@ class Colors:
 
     @classmethod
     def get_cell_colors(cls):
-        return [cls.dark_grey, cls.green, cls.red, cls.orange, cls.yellow, cls.purple, cls.cyan, cls.blue]
+        return [cls.dark_grey, cls.green, cls.red, cls.orange, cls.yellow, 
+                cls.purple, cls.cyan, cls.blue]
 
+class Game:
+    def __init__(self):
+        self.grid = Grid()
+        self.blocks = [Iblock(), Jblock(), Lblock(), 
+                       Oblock(), Sblock(), Tblock(), Zblock()]
+        self.current_block = self.get_random_block()
+        self.next_block = self.get_random_block()
+        
+    def get_random_block(self):
+        if len(self.blocks) == 0:
+             self.blocks = [Iblock(), Jblock(), Lblock(), 
+                       Oblock(), Sblock(), Tblock(), Zblock()]
+        block = random.choice(self.blocks)
+        self.blocks.remove(block)
+        return block
+    
+    def move_left(self):
+        self.current_block.move(0, -1)
+        if self.block_inside() == False:
+            self.current_block.move (0, 1)
+    
+    def move_right(self):
+        self.current_block.move(0, 1)
+        if self.block_inside() == False:
+            self.current_block.move (0, -1)       
 
+    def move_down(self):
+        self.current_block.move(1,0)
+        if self.block_inside() == False:
+            self.current_block.move (-1,0)
 
-game_grid = Grid()
+    def block_inside(self):
+        tiles = self.current_block.get_cell_positions()
+        for tile in tiles:
+            if self.grid.is_inside(tile.row, tile.column) == False:
+                return False
+        return True
 
-block = Tblock()
+    
+    def draw(self, screen):
+        self.grid.draw(screen)
+        self.current_block.draw(screen)
 
-game_grid.print_grid()
+game = Game()
 
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
-            exit()         
-
+            exit()     
+        if event.type == pygame.KEYDOWN:   
+            if event.key == pygame.K_LEFT: 
+                game.move_left()
+            if event.key == pygame.K_RIGHT: 
+                game.move_right()      
+            if event.key == pygame.K_DOWN: 
+                game.move_down()
+    
     screen.fill(dark_blue)
-    game_grid.draw(screen)
-    block.draw(screen)
+    game.draw(screen)
     pygame.display.update()
     clock.tick(60)
